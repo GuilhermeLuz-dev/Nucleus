@@ -15,6 +15,7 @@ public class Player {
     private final double maxHealth;
     private double attackCooldown;
     private int healthPotions;
+    private double storedPotionHeal = 100;
 
     private final CharacterAnimator animator;
     private CharacterAnimator.Direction direction;
@@ -54,6 +55,25 @@ public class Player {
 
         x += dx * speed * deltaTime;
         y += dy * speed * deltaTime;
+    }
+
+
+    /** Move já normalizado em pixels; usado pelo GameEngine depois da colisão. */
+    public void moveByPixels(double dx, double dy) {
+        x += dx;
+        y += dy;
+        if (dx != 0 || dy != 0) {
+            moving = true;
+            setDirection(dx, dy);
+        }
+    }
+
+    public void setMoving(boolean moving) {
+        this.moving = moving;
+    }
+
+    public void setHealthPotions(int amount) {
+        healthPotions = Math.max(0, amount);
     }
 
     public void updateCooldowns(double deltaTime) {
@@ -107,12 +127,27 @@ public class Player {
         health = maxHealth;
     }
 
+    public void resetState() {
+        health = maxHealth;
+        attackCooldown = 0;
+        attackAnimationTimer = 0;
+        healthPotions = 0;
+        storedPotionHeal = 100;
+        moving = false;
+    }
+
+
     public void heal(double amount) {
         health = Math.min(maxHealth, health + Math.max(0, amount));
     }
 
     public void addHealthPotion() {
+        addHealthPotion(100);
+    }
+
+    public void addHealthPotion(double healAmount) {
         healthPotions++;
+        storedPotionHeal = Math.max(1, healAmount);
     }
 
     public int getHealthPotions() {
@@ -124,7 +159,7 @@ public class Player {
             return false;
         }
         healthPotions--;
-        heal(100);
+        heal(storedPotionHeal);
         return true;
     }
 

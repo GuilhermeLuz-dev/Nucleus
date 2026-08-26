@@ -7,6 +7,9 @@ import br.edu.unex.nucleus.entity.Enemy;
 public class TerrakBoss extends Enemy {
 
     public TerrakBoss(double x, double y) {
-        super(x, y, new TripleBoltPower(), 1200, 72, 72, true, 20);
+        // Plant3: spritesheet 64x64, 4 direções.
+        // Frames: Idle 4, Walk 6, Attack 7, Hurt 5, Death 10.
+        super(x, y, new TripleBoltPower(), 1200, 72, 72, true, 20,
+                "/sprites/terrakplant", 4, 6, 7, 5, 10);
     }
 }

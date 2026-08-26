@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="15" tileheight="15" infinite="1" nextlayerid="6" nextobjectid="30">
- 
- <tileset firstgid="6890" name="ignar" tilewidth="15" tileheight="15" tilecount="6889" columns="83">
+ <tileset firstgid="1" name="ignar" tilewidth="15" tileheight="15" tilecount="6889" columns="83">
   <image source="ignar.png" width="1254" height="1254"/>
  </tileset>
  <layer id="1" name="Camada de Blocos 1" width="15" height="15">
@@ -716,7 +715,7 @@
   </object>
  </objectgroup>
  <objectgroup id="3" name="Monstros">
-  <object id="21" x="-290" y="-454" width="64" height="50"/>
+  <object id="21" x="-264.51" y="-467.595" width="31.713" height="26.2096"/>
   <object id="22" x="-28" y="118" width="72" height="68"/>
   <object id="23" x="522" y="-18" width="56" height="54"/>
   <object id="24" x="-592" y="-22" width="66" height="62"/>

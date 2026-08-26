@@ -12,7 +12,17 @@ import java.util.Map;
  * Suporta mapas finitos e mapas infinitos (camadas com chunks CSV).
  */
 public class TiledMap {
-    public record MapObject(double x, double y, double width, double height, double rotation) {}
+    public record MapObject(
+            double x, double y, double width, double height, double rotation,
+            String name, String type, java.util.Map<String, String> properties) {
+
+        public double centerX() { return x + width / 2.0; }
+        public double centerY() { return y + height / 2.0; }
+        public String property(String key) {
+            if (key == null) return null;
+            return properties.get(key);
+        }
+    }
     public record TileSet(Image image, int tileWidth, int tileHeight, int columns) {}
 
     private final int width;
@@ -224,8 +234,22 @@ public class TiledMap {
                     double width = parseDouble(object.getAttribute("width"));
                     double height = parseDouble(object.getAttribute("height"));
                     double rotation = parseDouble(object.getAttribute("rotation"));
+                    String name = object.getAttribute("name");
+                    String type = object.getAttribute("type");
 
-                    result.add(new MapObject(x, y, width, height, rotation));
+                    java.util.Map<String, String> properties = new java.util.HashMap<>();
+                    NodeList propertyNodes = object.getElementsByTagName("property");
+                    for (int p = 0; p < propertyNodes.getLength(); p++) {
+                        Element property = (Element) propertyNodes.item(p);
+                        String propertyName = property.getAttribute("name");
+                        String propertyValue = property.getAttribute("value");
+                        if (propertyValue == null || propertyValue.isBlank()) {
+                            propertyValue = property.getTextContent();
+                        }
+                        properties.put(propertyName, propertyValue);
+                    }
+
+                    result.add(new MapObject(x, y, width, height, rotation, name, type, properties));
                 }
             }
         } catch (Exception e) {

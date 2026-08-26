@@ -32,11 +32,21 @@ public class CharacterAnimator {
     private boolean finished;
 
     public CharacterAnimator(String basePath) {
-        load(Action.IDLE, basePath + "/idle.png", 4);
-        load(Action.WALK, basePath + "/walk.png", 6);
-        load(Action.ATTACK, basePath + "/attack.png", 12);
-        load(Action.HURT, basePath + "/hurt.png", 4);
-        load(Action.DEATH, basePath + "/death.png", 11);
+        this(basePath, 4, 6, 12, 4, 11);
+    }
+
+    /**
+     * Permite usar spritesheets com quantidades de quadros diferentes.
+     * Cada quadro continua sendo 64x64 e as quatro direções ficam em linhas.
+     */
+    public CharacterAnimator(String basePath,
+                             int idleFrames, int walkFrames, int attackFrames,
+                             int hurtFrames, int deathFrames) {
+        load(Action.IDLE, basePath + "/idle.png", idleFrames);
+        load(Action.WALK, basePath + "/walk.png", walkFrames);
+        load(Action.ATTACK, basePath + "/attack.png", attackFrames);
+        load(Action.HURT, basePath + "/hurt.png", hurtFrames);
+        load(Action.DEATH, basePath + "/death.png", deathFrames);
     }
 
     private void load(Action action, String path, int frameCount) {

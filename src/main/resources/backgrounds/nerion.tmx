@@ -703,11 +703,11 @@
   </object>
  </objectgroup>
  <objectgroup id="4" name="Monstros">
-  <object id="12" x="-41.3333" y="16" width="44" height="54.6667"/>
-  <object id="13" x="322.667" y="-81.3333" width="38.6667" height="46.6667"/>
-  <object id="14" x="-412" y="-98.6667" width="45.3333" height="60"/>
-  <object id="15" x="-60" y="-430.667" width="56" height="44"/>
-  <object id="16" x="262.667" y="316" width="53.3333" height="50.6667"/>
+  <object id="12" x="-36" y="58" width="27.3333" height="23.3334"/>
+  <object id="13" x="331.164" y="-67.7388" width="21.0722" height="18.9416"/>
+  <object id="14" x="-421.83" y="-87.5034" width="15.8041" height="14.6804"/>
+  <object id="15" x="-36" y="-419.334" width="30" height="19.3333"/>
+  <object id="16" x="276.262" y="314.301" width="26.1443" height="30.2749"/>
  </objectgroup>
  <objectgroup id="5" name="Poções">
   <object id="17" x="56" y="316" width="22.6667" height="25.3333"/>

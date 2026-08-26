@@ -15,6 +15,7 @@ public class HealthPotion {
 
     public boolean isCollected() { return collected; }
     public void collect() { collected = true; }
+    public void reset() { collected = false; }
     public double getX() { return x; }
     public double getY() { return y; }
     public double getHealAmount() { return healAmount; }
