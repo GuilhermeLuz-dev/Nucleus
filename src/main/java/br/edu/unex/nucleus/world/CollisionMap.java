@@ -194,35 +194,24 @@ public class CollisionMap {
     }
 
     private void loadCollisionImage() {
-        String resource;
-
-        switch (mapId) {
-            case "terrak", "ignar", "nerion" -> {
-                resource = "/backgrounds/" + mapId + "_collision.png";
-                maskMode = true;
-            }
-            case "zephyron" -> {
-                resource = "/backgrounds/zephyron.jpeg";
-                maskMode = false;
-            }
-            case "floresta" -> {
-                resource = "/backgrounds/floresta_sombria.png";
-                maskMode = false;
-            }
-            default -> {
-                maskMode = false;
-                return;
-            }
+        // Fallback opcional: os mapas atuais devem preferir a camada "Colisão"
+        // do Tiled. Se ela não existir, tentamos somente a máscara do próprio
+        // mapa atual, sem qualquer referência aos mapas antigos removidos.
+        if (!mapId.equals("terrak") && !mapId.equals("nerion") && !mapId.equals("ignar")) {
+            maskMode = false;
+            return;
         }
 
+        String resource = "/backgrounds/" + mapId + "_collision.png";
         InputStream stream = getClass().getResourceAsStream(resource);
         if (stream == null) {
-            System.err.println("[CollisionMap] Imagem de colisão não encontrada: " + resource);
+            maskMode = false;
             return;
         }
 
         collisionImage = new Image(stream);
         pixelReader = collisionImage.getPixelReader();
+        maskMode = true;
     }
 
     private boolean touchesBlockedTerrain(Rectangle2D r) {

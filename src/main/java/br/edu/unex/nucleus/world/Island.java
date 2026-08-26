@@ -25,7 +25,9 @@ public class Island {
 
     private final List<Projectile> projectiles;
     private final List<HealthPotion> healthPotions;
+    private final List<DamageZone> damageZones;
     private final CollisionMap collisionMap;
+    private Enemy fallbackBoss;
 
     // Dimensões do mundo em pixels. Mapas maiores que a janela usam câmera.
     private final double worldWidth;
@@ -56,6 +58,7 @@ public class Island {
 
         this.projectiles = new ArrayList<>();
         this.healthPotions = new ArrayList<>();
+        this.damageZones = new ArrayList<>();
         this.collisionMap = new CollisionMap(id, tiledMap, tiledMapPath);
     }
 
@@ -111,6 +114,10 @@ public class Island {
         return healthPotions;
     }
 
+    public List<DamageZone> getDamageZones() {
+        return damageZones;
+    }
+
     public double getWorldWidth() {
         return worldWidth;
     }
@@ -121,5 +128,19 @@ public class Island {
 
     public CollisionMap getCollisionMap() {
         return collisionMap;
+    }
+
+    public void setFallbackBoss(Enemy boss) {
+        this.fallbackBoss = boss;
+    }
+
+    public Enemy getFallbackBoss() {
+        return fallbackBoss;
+    }
+
+    public void resetEnemies() {
+        for (Enemy enemy : enemies) {
+            enemy.reset();
+        }
     }
 }
