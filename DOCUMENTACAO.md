@@ -1,5 +1,12 @@
 # Documentação da navegação do mapa e da IA
 
+# Integrantes responsáveis pela implementação
+
+Joaqson Rodrigues Miranda
+Guilherme Luz Rocha
+Monique Prado Pereira Gomes
+Lucas Santos Oliveira
+
 ## 1) Como o tilemap foi convertido em uma estrutura navegável
 
 O ponto central da navegação está em AStarPathfinder.java
