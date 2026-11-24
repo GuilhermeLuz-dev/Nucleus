@@ -6,7 +6,6 @@ import br.edu.unex.nucleus.ai.SingleBoltPower;
 import br.edu.unex.nucleus.ai.TripleBoltPower;
 import br.edu.unex.nucleus.entity.Enemy;
 import br.edu.unex.nucleus.entity.HealthPotion;
-import br.edu.unex.nucleus.entity.Portal;
 import javafx.scene.paint.Color;
 
 import java.util.ArrayList;
@@ -47,6 +46,15 @@ public final class WorldBuilder {
                 new IgnarBoss(615, 135)
         ));
 
+        // Mapa narrativo final: não possui boss nem monstros obrigatórios.
+        world.addIsland(createIsland(
+                "final",
+                "Santuário dos Irmãos",
+                "/backgrounds/final.tmx",
+                Color.rgb(45, 45, 55),
+                null
+        ));
+
         world.setInitialIsland("terrak");
         world.initializeEntitiesFromMaps();
         return world;
@@ -62,7 +70,6 @@ public final class WorldBuilder {
         Island island = new Island(
                 id,
                 displayName,
-                new ArrayList<>(),
                 new ArrayList<>(),
                 fallbackColor,
                 null,

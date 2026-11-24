@@ -2,7 +2,7 @@ package br.edu.unex.nucleus.world;
 
 import br.edu.unex.nucleus.entity.Enemy;
 import br.edu.unex.nucleus.entity.HealthPotion;
-import br.edu.unex.nucleus.entity.Portal;
+import br.edu.unex.nucleus.entity.FinalBrother;
 import br.edu.unex.nucleus.entity.Projectile;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -16,7 +16,6 @@ public class Island {
     private final String displayName;
 
     private final List<Enemy> enemies;
-    private final List<Portal> portals;
 
     private final Color backgroundColor;
 
@@ -26,6 +25,7 @@ public class Island {
     private final List<Projectile> projectiles;
     private final List<HealthPotion> healthPotions;
     private final List<DamageZone> damageZones;
+    private final List<FinalBrother> finalBrothers;
     private final CollisionMap collisionMap;
     private Enemy fallbackBoss;
 
@@ -33,22 +33,21 @@ public class Island {
     private final double worldWidth;
     private final double worldHeight;
 
-    public Island(String id, String displayName, List<Enemy> enemies, List<Portal> portals, Color backgroundColor) {
-        this(id, displayName, enemies, portals, backgroundColor, null, null);
+    public Island(String id, String displayName, List<Enemy> enemies, Color backgroundColor) {
+        this(id, displayName, enemies, backgroundColor, null, null);
     }
 
-    public Island(String id, String displayName, List<Enemy> enemies, List<Portal> portals,
+    public Island(String id, String displayName, List<Enemy> enemies,
                   Color backgroundColor, String backgroundImagePath) {
-        this(id, displayName, enemies, portals, backgroundColor, backgroundImagePath, null);
+        this(id, displayName, enemies, backgroundColor, backgroundImagePath, null);
     }
 
-    public Island(String id, String displayName, List<Enemy> enemies, List<Portal> portals,
+    public Island(String id, String displayName, List<Enemy> enemies,
                   Color backgroundColor, String backgroundImagePath, String tiledMapPath) {
 
         this.id = id;
         this.displayName = displayName;
         this.enemies = enemies;
-        this.portals = portals;
         this.backgroundColor = backgroundColor;
         this.tiledMap = tiledMapPath == null ? null : new TiledMap(tiledMapPath);
         this.backgroundImage = tiledMap != null ? null : loadBackgroundImage(backgroundImagePath);
@@ -59,6 +58,7 @@ public class Island {
         this.projectiles = new ArrayList<>();
         this.healthPotions = new ArrayList<>();
         this.damageZones = new ArrayList<>();
+        this.finalBrothers = new ArrayList<>();
         this.collisionMap = new CollisionMap(id, tiledMap, tiledMapPath);
     }
 
@@ -89,12 +89,7 @@ public class Island {
     public List<Enemy> getEnemies() {
         return enemies;
     }
-
-    public List<Portal> getPortals() {
-        return portals;
-    }
-
-    public Color getBackgroundColor() {
+public Color getBackgroundColor() {
         return backgroundColor;
     }
 
@@ -116,6 +111,10 @@ public class Island {
 
     public List<DamageZone> getDamageZones() {
         return damageZones;
+    }
+
+    public List<FinalBrother> getFinalBrothers() {
+        return finalBrothers;
     }
 
     public double getWorldWidth() {

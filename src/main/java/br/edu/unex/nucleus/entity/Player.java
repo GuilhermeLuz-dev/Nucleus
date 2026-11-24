@@ -11,6 +11,7 @@ public class Player {
     private final double height;
 
     private final double speed;
+    private double movementMultiplier = 1.0;
     private double health;
     private final double maxHealth;
     private double attackCooldown;
@@ -53,8 +54,8 @@ public class Player {
             dy /= length;
         }
 
-        x += dx * speed * deltaTime;
-        y += dy * speed * deltaTime;
+        x += dx * speed * movementMultiplier * deltaTime;
+        y += dy * speed * movementMultiplier * deltaTime;
     }
 
 
@@ -67,6 +68,8 @@ public class Player {
             setDirection(dx, dy);
         }
     }
+
+    public void setMovementMultiplier(double multiplier) { movementMultiplier = multiplier; }
 
     public void setMoving(boolean moving) {
         this.moving = moving;
@@ -194,7 +197,7 @@ public class Player {
     }
 
     public double getSpeed() {
-        return speed;
+        return speed * movementMultiplier;
     }
 
     public double getHealth() {

@@ -42,6 +42,8 @@ public class Enemy {
     private final EnemyPower basePower;
     private final double maxHealth;
     private double health;
+    private boolean bossHealUsed;
+    private double regenerationMessageTimer;
     private final boolean boss;
     private final double contactDamage;
 
@@ -56,7 +58,7 @@ public class Enemy {
     private static final double PATROL_POINT_TOLERANCE = 8;
     private static final double PATROL_PAUSE = 0.45;
 
-    // A* para inimigos comuns
+    // A* somente para inimigos comuns. Bosses continuam com a movimentação anterior.
     private final AStarPathfinder pathfinder = new AStarPathfinder();
     private List<PathPoint> currentPath = List.of();
     private int currentPathIndex;
@@ -175,6 +177,7 @@ public class Enemy {
         }
 
         hurtTimer = Math.max(0, hurtTimer - deltaTime);
+        regenerationMessageTimer = Math.max(0, regenerationMessageTimer - deltaTime);
         onBeforeUpdate(deltaTime, player);
 
         boolean seesPlayer = canSeePlayer(player, collisionMap);
@@ -273,7 +276,7 @@ public class Enemy {
             return;
         }
 
-        if (!boss && collisionMap != null) {
+        if (collisionMap != null) {
             followPathTo(lastKnownX, lastKnownY, chaseSpeed, deltaTime, collisionMap);
         } else {
             moveTowards(lastKnownX, lastKnownY, chaseSpeed, deltaTime, collisionMap);
@@ -294,6 +297,11 @@ public class Enemy {
             return List.of();
         }
 
+        if (movesDuringAttack() && distanceToPlayer > 105) {
+            moveTowards(playerCenterX(player), playerCenterY(player), chaseSpeed * 0.65,
+                    deltaTime, collisionMap);
+        }
+
         attackCooldownTimer -= deltaTime;
         if (attackCooldownTimer > 0) return List.of();
 
@@ -303,6 +311,8 @@ public class Enemy {
         onAttackPerformed(player);
         return result;
     }
+
+    protected boolean movesDuringAttack() { return boss; }
 
     /** Bosses sobrescrevem para trocar ataques conforme a fase. */
     protected EnemyPower selectPower(Player player) {
@@ -326,7 +336,7 @@ public class Enemy {
         }
 
         boolean moved;
-        if (!boss && collisionMap != null) {
+        if (collisionMap != null) {
             moved = followPathTo(homeX, homeY, patrolSpeed * 1.15, deltaTime, collisionMap);
         } else {
             moved = moveTowards(homeX, homeY, patrolSpeed * 1.15, deltaTime, collisionMap);
@@ -441,7 +451,7 @@ public class Enemy {
                     collisionMap,
                     x, y,
                     targetX, targetY,
-                    width, height
+                    34, 44
             );
             currentPathIndex = 0;
             pathTargetX = targetX;
@@ -535,23 +545,13 @@ public class Enemy {
     }
 
     private boolean canOccupy(CollisionMap map, double centerX, double centerY) {
-        if (!boss) {
-            // Para navegação, o slime consulta somente uma pequena área nos pés.
-            // O sprite continua 80x94; isso não altera a CollisionMap nem a
-            // hitbox do Player. Evita spawns próximos a paredes ficarem presos.
-            final double footW = 18;
-            final double footH = 14;
-            final double spriteLeft = centerX - width / 2.0;
-            final double spriteTop = centerY - height / 2.0;
-            final double footX = spriteLeft + (width - footW) / 2.0;
-            final double footY = spriteTop + height - footH - 5;
-            return map.canMoveTo(footX, footY, footW, footH);
-        }
-
-        // Bosses permanecem com a navegação anterior.
-        double hitboxW = Math.max(14, width * 0.72);
-        double hitboxH = Math.max(14, height * 0.72);
-        return map.canMoveTo(centerX - hitboxW / 2.0, centerY - hitboxH / 2.0, hitboxW, hitboxH);
+        // Mesma hitbox de colisão do jogador (GameEngine.isValidPlayerPosition):
+        // 34x44, centralizada horizontalmente e posicionada sobre os pés.
+        final double hitboxW = 34;
+        final double hitboxH = 44;
+        final double left = centerX - hitboxW / 2.0;
+        final double top = centerY + height / 2.0 - hitboxH - 6;
+        return map.canMoveTo(left, top, hitboxW, hitboxH);
     }
 
     private double angleDifference(double a, double b) {
@@ -583,6 +583,7 @@ public class Enemy {
     public CharacterAnimator getAnimator() { return animator; }
     public double getHealth() { return health; }
     public double getMaxHealth() { return maxHealth; }
+    public boolean isShowingRegenerationMessage() { return regenerationMessageTimer > 0; }
     public double getHealthRatio() { return maxHealth <= 0 ? 0 : health / maxHealth; }
     public boolean isDead() { return health <= 0; }
     public boolean isBoss() { return boss; }
@@ -592,6 +593,8 @@ public class Enemy {
         x = homeX;
         y = homeY;
         health = maxHealth;
+        bossHealUsed = false;
+        regenerationMessageTimer = 0;
         state = EnemyState.PATROL;
         alertTimer = 0;
         attackCooldownTimer = 0;
@@ -608,6 +611,11 @@ public class Enemy {
         if (isDead()) return;
         double oldHealth = health;
         health = Math.max(0, health - amount);
+        if (boss && !bossHealUsed && health > 0 && health <= maxHealth * 0.5) {
+            health = maxHealth;
+            bossHealUsed = true;
+            regenerationMessageTimer = 3.5;
+        }
         hurtTimer = 0.14;
         onHealthChanged(oldHealth, health);
         if (isDead()) animator.setAction(CharacterAnimator.Action.DEATH);
