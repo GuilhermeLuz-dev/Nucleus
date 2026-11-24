@@ -6,8 +6,8 @@ import br.edu.unex.nucleus.ai.SingleBoltPower;
 import br.edu.unex.nucleus.ai.TripleBoltPower;
 import br.edu.unex.nucleus.entity.Enemy;
 import br.edu.unex.nucleus.entity.HealthPotion;
+import br.edu.unex.nucleus.entity.FinalBrother;
 import br.edu.unex.nucleus.entity.Player;
-import br.edu.unex.nucleus.entity.Portal;
 import br.edu.unex.nucleus.entity.Projectile;
 
 import java.util.ArrayList;
@@ -31,6 +31,20 @@ public class WorldManager {
     private boolean nerionDefeated;
     private boolean ignarDefeated;
 
+    private boolean finalSceneCompleted;
+    private boolean finalDialogueActive;
+    private boolean finalBrothersFreed;
+    private boolean finalSealSequenceActive;
+    private double finalSealSequenceTimer;
+    private int finalDialogueIndex = -1;
+
+    private static final String[] FINAL_DIALOGUE = {
+            "Irmão: Você conseguiu... chegou até nós.",
+            "Ficamos presos nesta ilha enquanto os Senhores Elementais guardavam o caminho.",
+            "Irmão: As prisões se romperam. Estamos livres!",
+            "Você veio nos salvar. Agora podemos voltar para casa juntos."
+    };
+
     public void addIsland(Island island) {
         islands.put(island.getId(), island);
     }
@@ -51,7 +65,7 @@ public class WorldManager {
     }
 
     /**
-     * Lê do Tiled as camadas Monstros, Poções, Player e Portais.
+     * Lê do Tiled as camadas Monstros, Poções e Player.
      * Boss pode ser colocado em uma camada "Boss"; se ela não existir,
      * usa a posição definida no WorldBuilder.
      */
@@ -62,8 +76,8 @@ public class WorldManager {
 
             createMonsters(island, map);
             createPotions(island, map);
-            createPortals(island, map);
             createDamageZones(island, map);
+            createFinalBrothers(island, map);
             createBoss(island, map);
         }
     }
@@ -154,6 +168,28 @@ public class WorldManager {
         }
     }
 
+    private void createFinalBrothers(Island island, TiledMap map) {
+        if (!"final".equalsIgnoreCase(island.getId())) return;
+        if (!island.getFinalBrothers().isEmpty()) return;
+
+        List<TiledMap.MapObject> objects = map.getObjects("Irmãos");
+        String[] sprites = {
+                "/sprites/brothers/brother1.png",
+                "/sprites/brothers/brother2.png",
+                "/sprites/brothers/brother3.png"
+        };
+
+        for (int i = 0; i < Math.min(3, objects.size()); i++) {
+            TiledMap.MapObject object = objects.get(i);
+            island.getFinalBrothers().add(new FinalBrother(
+                    "Irmão " + (i + 1),
+                    object.x(),
+                    object.y(),
+                    sprites[i]
+            ));
+        }
+    }
+
     private void createBoss(Island island, TiledMap map) {
         if (island.getEnemies().stream().anyMatch(Enemy::isBoss)) return;
 
@@ -167,26 +203,6 @@ public class WorldManager {
         if (boss != null) island.getEnemies().add(boss);
     }
 
-    private void createPortals(Island island, TiledMap map) {
-        for (TiledMap.MapObject object : map.getObjects("Portais")) {
-            String target = firstNonBlank(
-                    object.property("targetIsland"),
-                    object.property("mapaDestino"),
-                    object.property("destino")
-            );
-            if (target == null) continue;
-
-            double spawnX = parseDouble(firstNonBlank(object.property("targetSpawnX"), object.property("spawnX")), 0);
-            double spawnY = parseDouble(firstNonBlank(object.property("targetSpawnY"), object.property("spawnY")), 0);
-
-            island.getPortals().add(new Portal(
-                    object.x(), object.y(),
-                    Math.max(40, object.width()),
-                    Math.max(40, object.height()),
-                    target, spawnX, spawnY
-            ));
-        }
-    }
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
@@ -200,7 +216,7 @@ public class WorldManager {
         try { return Double.parseDouble(value); } catch (NumberFormatException e) { return fallback; }
     }
 
-    /** Atualiza IA, inimigos, projéteis, poções e portais. */
+    /** Atualiza IA, inimigos, projéteis e poções. */
     public void update(Player player, double deltaTime, boolean playerIsMakingNoise) {
         Island island = getCurrentIsland();
         if (island == null || player.isDead()) return;
@@ -209,7 +225,7 @@ public class WorldManager {
         updateProjectiles(island, player, deltaTime);
         collectHealthPotions(island, player);
         applyDamageZones(island, player, deltaTime);
-        checkPortals(player);
+        updateFinalEvent(island, player, deltaTime);
     }
 
     private void updateEnemies(Island island, Player player, double deltaTime, boolean playerIsMakingNoise) {
@@ -222,18 +238,20 @@ public class WorldManager {
             List<Projectile> spawned = enemy.update(
                     player, deltaTime, playerIsMakingNoise, island.getCollisionMap());
 
-            // Bosses mantêm a validação antiga com o corpo inteiro.
-            // Enemies comuns já validam cada passo pela hitbox dos pés dentro
-            // de Enemy.moveTowards()/A*, evitando que um sprite 80x94 seja
-            // devolvido à posição anterior só por encostar visualmente na parede.
-            if (enemy.isBoss() && !island.getCollisionMap().canMoveTo(
-                    enemy.getX() - enemy.getWidth() / 2.0,
-                    enemy.getY() - enemy.getHeight() / 2.0,
-                    enemy.getWidth(), enemy.getHeight())) {
-                enemy.setPosition(oldX, oldY);
-            }
+            // O próprio Enemy valida cada passo com a mesma hitbox do jogador.
+            // Não reverte a posição por colisão do sprite visual inteiro.
 
             island.getProjectiles().addAll(spawned);
+
+            if (enemy instanceof ElementBoss elemental && elemental.isSpecialActive()) {
+                double px = player.getX() + player.getWidth() / 2;
+                double py = player.getY() + player.getHeight() / 2;
+                double distance = Math.hypot(px - elemental.getSpecialX(), py - elemental.getSpecialY());
+                if (distance <= elemental.getSpecialRadius() && elemental.isFireSpecial()
+                        && elemental.consumeSpecialHit()) {
+                    player.takeDamage(40);
+                }
+            }
 
             if (enemy.isCollidingWith(player)) {
                 player.takeDamage(enemy.getContactDamage() * deltaTime);
@@ -284,6 +302,82 @@ public class WorldManager {
         }
     }
 
+    private void updateFinalEvent(Island island, Player player, double deltaTime) {
+        if (!"final".equalsIgnoreCase(island.getId()) || finalSceneCompleted) {
+            return;
+        }
+
+        // Sequência dos três selos. Durante esse período os irmãos NÃO falam.
+        if (finalSealSequenceActive) {
+            finalSealSequenceTimer -= deltaTime;
+
+            // ~3 segundos: Terra -> Água -> Fogo -> prisões quebram.
+            if (finalSealSequenceTimer <= 0) {
+                finalSealSequenceActive = false;
+                finalBrothersFreed = true;
+                finalDialogueActive = true;
+                finalDialogueIndex = 0;
+            }
+            return;
+        }
+
+        if (finalDialogueActive || finalBrothersFreed) {
+            return;
+        }
+
+        List<TiledMap.MapObject> events = island.getTiledMap().getObjects("EventoFinal");
+        if (events.isEmpty()) return;
+
+        TiledMap.MapObject event = events.get(0);
+
+        double playerLeft = player.getX();
+        double playerTop = player.getY();
+        double playerRight = playerLeft + player.getWidth();
+        double playerBottom = playerTop + player.getHeight();
+
+        double eventRight = event.x() + event.width();
+        double eventBottom = event.y() + event.height();
+
+        boolean intersects = playerRight > event.x()
+                && playerLeft < eventRight
+                && playerBottom > event.y()
+                && playerTop < eventBottom;
+
+        if (intersects) {
+            finalSealSequenceActive = true;
+            finalSealSequenceTimer = 3.2;
+        }
+    }
+
+    public void advanceFinalDialogue() {
+        if (!finalDialogueActive) return;
+
+        finalDialogueIndex++;
+
+        if (finalDialogueIndex >= FINAL_DIALOGUE.length) {
+            finalDialogueActive = false;
+            finalSceneCompleted = true;
+            finalDialogueIndex = -1;
+        }
+    }
+
+    public boolean isFinalDialogueActive() {
+        return finalDialogueActive;
+    }
+
+    public boolean areFinalBrothersFreed() {
+        return finalBrothersFreed;
+    }
+
+    public String getFinalDialogueText() {
+        if (!finalDialogueActive
+                || finalDialogueIndex < 0
+                || finalDialogueIndex >= FINAL_DIALOGUE.length) {
+            return null;
+        }
+        return FINAL_DIALOGUE[finalDialogueIndex];
+    }
+
     public void playerAttack(Player player) {
         if (!player.canAttack()) return;
 
@@ -300,7 +394,7 @@ public class WorldManager {
             double attackRange = enemy.isBoss() ? 105 : 65;
 
             if (distance <= attackRange) {
-                enemy.takeDamage(enemy.isBoss() ? 75 : 45);
+                enemy.takeDamage(enemy.isBoss() ? 150 : 90);
                 hit = true;
 
                 if (enemy.isBoss() && enemy.isDead()) {
@@ -322,7 +416,10 @@ public class WorldManager {
                 nerionDefeated = true;
                 transitionTo("ignar", player);
             }
-            case "ignar" -> ignarDefeated = true;
+            case "ignar" -> {
+                ignarDefeated = true;
+                transitionTo("final", player);
+            }
             default -> { }
         }
     }
@@ -348,27 +445,19 @@ public class WorldManager {
         }
     }
 
-    private void checkPortals(Player player) {
-        Island island = getCurrentIsland();
-        for (Portal portal : island.getPortals()) {
-            if (portal.isPlayerColliding(player)) {
-                travelThrough(portal, player);
-                return;
-            }
-        }
-    }
 
-    private void travelThrough(Portal portal, Player player) {
-        if (!islands.containsKey(portal.getTargetIslandId())) return;
-        currentIslandId = portal.getTargetIslandId();
-        player.setPosition(portal.getTargetSpawnX(), portal.getTargetSpawnY());
-    }
 
     public void resetCampaign() {
         currentIslandId = "terrak";
         terrakDefeated = false;
         nerionDefeated = false;
         ignarDefeated = false;
+        finalSceneCompleted = false;
+        finalDialogueActive = false;
+        finalBrothersFreed = false;
+        finalDialogueIndex = -1;
+        finalSealSequenceActive = false;
+        finalSealSequenceTimer = 0;
 
         for (Island island : islands.values()) {
             island.getProjectiles().clear();
@@ -380,7 +469,7 @@ public class WorldManager {
     public boolean isTerrakDefeated() { return terrakDefeated; }
     public boolean isNerionDefeated() { return nerionDefeated; }
     public boolean isIgnarDefeated() { return ignarDefeated; }
-    public boolean isCampaignComplete() { return ignarDefeated; }
+    public boolean isCampaignComplete() { return finalSceneCompleted; }
 
     public Map<String, Island> getIslands() { return Map.copyOf(islands); }
 }

@@ -11,5 +11,6 @@ public class TerrakBoss extends Enemy {
         // Frames: Idle 4, Walk 6, Attack 7, Hurt 5, Death 10.
         super(x, y, new TripleBoltPower(), 1200, 72, 72, true, 20,
                 "/sprites/terrakplant", 4, 6, 7, 5, 10);
+        configurePatrol(65, 65);
     }
 }

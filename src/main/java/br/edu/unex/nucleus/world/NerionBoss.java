@@ -4,5 +4,9 @@ package br.edu.unex.nucleus.world;
 public class NerionBoss extends ElementBoss {
     public NerionBoss(double x, double y) {
         super(x, y, "NERION — SENHORA DAS ÁGUAS", 1500, 26);
+        configurePatrol(65, 65);
     }
+
+    @Override
+    protected boolean movesDuringAttack() { return true; }
 }

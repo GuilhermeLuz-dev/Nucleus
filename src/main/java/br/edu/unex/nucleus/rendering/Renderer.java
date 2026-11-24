@@ -3,8 +3,8 @@ package br.edu.unex.nucleus.rendering;
 import br.edu.unex.nucleus.ai.EnemyState;
 import br.edu.unex.nucleus.entity.Enemy;
 import br.edu.unex.nucleus.entity.HealthPotion;
+import br.edu.unex.nucleus.entity.FinalBrother;
 import br.edu.unex.nucleus.entity.Player;
-import br.edu.unex.nucleus.entity.Portal;
 import br.edu.unex.nucleus.entity.Projectile;
 import br.edu.unex.nucleus.world.Island;
 import br.edu.unex.nucleus.world.ElementBoss;
@@ -31,12 +31,10 @@ public class Renderer {
     }
 
     public void render(Island island, Player player, Camera camera,
-                       double deltaTime, boolean gameOver, boolean gameWon) {
+                       double deltaTime, boolean gameOver, boolean gameWon,
+                       boolean finalDialogueActive, String finalDialogueText,
+                       boolean finalBrothersFreed) {
         drawBackground(island, camera.getX(), camera.getY());
-
-        for (Portal portal : island.getPortals()) {
-            drawPortal(portal, camera.getX(), camera.getY());
-        }
 
         for (HealthPotion potion : island.getHealthPotions()) {
             drawHealthPotion(potion, camera.getX(), camera.getY());
@@ -50,10 +48,12 @@ public class Renderer {
             drawEnemy(enemy, camera.getX(), camera.getY());
         }
 
+        drawFinalBrothers(island, camera.getX(), camera.getY(), finalBrothersFreed);
         drawPlayer(player, camera.getX(), camera.getY());
 
         drawHud(island, player, deltaTime);
 
+        if (finalDialogueActive) drawFinalDialogue(finalDialogueText);
         if (gameOver) drawGameOverOverlay();
         if (gameWon) drawVictoryOverlay();
     }
@@ -141,6 +141,22 @@ public class Renderer {
             );
         }
 
+        if (enemy instanceof ElementBoss elemental &&
+                (elemental.isSpecialWarning() || elemental.isSpecialActive())) {
+            double radius = elemental.getSpecialRadius();
+            double cx = elemental.getSpecialX() - cameraX;
+            double cy = elemental.getSpecialY() - cameraY;
+            boolean warning = elemental.isSpecialWarning();
+            Color color = elemental.isFireSpecial() ? Color.ORANGERED : Color.DEEPSKYBLUE;
+            graphicsContext.setFill(Color.rgb(elemental.isFireSpecial() ? 255 : 20,
+                    elemental.isFireSpecial() ? 65 : 150,
+                    elemental.isFireSpecial() ? 20 : 255, warning ? 0.18 : 0.34));
+            graphicsContext.fillOval(cx - radius, cy - radius, radius * 2, radius * 2);
+            graphicsContext.setStroke(color);
+            graphicsContext.setLineWidth(warning ? 2 : 4);
+            graphicsContext.strokeOval(cx - radius, cy - radius, radius * 2, radius * 2);
+        }
+
         enemy.getAnimator().draw(
                 graphicsContext,
                 drawX,
@@ -148,15 +164,102 @@ public class Renderer {
                 enemy.getWidth(),
                 enemy.getHeight()
         );
+
+        String stateLabel = switch (enemy.getState()) {
+            case PATROL -> "PATRULHA";
+            case ALERT -> "ALERTA";
+            case CHASE -> "PERSEGUINDO";
+            case ATTACK -> "ATAQUE";
+            case RETURN -> "RETORNANDO";
+        };
+        graphicsContext.save();
+        graphicsContext.setFont(Font.font("System", FontWeight.BOLD, 9));
+        double labelWidth = stateLabel.length() * 6.0 + 10;
+        double labelX = enemy.getX() - cameraX - labelWidth / 2.0;
+        double labelY = drawY - 19;
+        graphicsContext.setFill(Color.rgb(0, 0, 0, 0.72));
+        graphicsContext.fillRoundRect(labelX, labelY, labelWidth, 15, 5, 5);
+        graphicsContext.setFill(Color.WHITE);
+        graphicsContext.fillText(stateLabel, labelX + 5, labelY + 11);
+        graphicsContext.restore();
+
+        if (enemy.isBoss() && enemy.isShowingRegenerationMessage()) {
+            String message = "Haha! Achou que ia me vencer? Estou revigorado!";
+            graphicsContext.save();
+            graphicsContext.setFont(Font.font("System", FontWeight.BOLD, 12));
+            double messageWidth = message.length() * 6.6 + 18;
+            double mx = drawX + enemy.getWidth() / 2.0 - messageWidth / 2.0;
+            double my = drawY - 48;
+            graphicsContext.setFill(Color.rgb(0, 0, 0, 0.85));
+            graphicsContext.fillRoundRect(mx, my, messageWidth, 25, 7, 7);
+            graphicsContext.setFill(Color.GOLD);
+            graphicsContext.fillText(message, mx + 9, my + 17);
+            graphicsContext.restore();
+        }
     }
 
-    private void drawPortal(Portal portal, double cameraX, double cameraY) {
-        double x = portal.getX() - cameraX;
-        double y = portal.getY() - cameraY;
-        graphicsContext.setFill(Color.rgb(180, 100, 220, 0.7));
-        graphicsContext.fillOval(x, y, portal.getWidth(), portal.getHeight());
-        graphicsContext.setStroke(Color.rgb(120, 40, 160));
-        graphicsContext.strokeOval(x, y, portal.getWidth(), portal.getHeight());
+
+    private void drawFinalBrothers(Island island, double cameraX, double cameraY,
+                                   boolean freed) {
+        if (!"final".equalsIgnoreCase(island.getId())) return;
+
+        for (FinalBrother brother : island.getFinalBrothers()) {
+            double x = brother.getX() - cameraX;
+            double y = brother.getY() - cameraY;
+
+            // Enquanto estão presos, desenha um cristal translúcido ao redor.
+            if (!freed) {
+                double cx = x + brother.getWidth() / 2.0;
+                double cy = y + brother.getHeight() / 2.0;
+
+                graphicsContext.setFill(Color.rgb(80, 220, 255, 0.28));
+                graphicsContext.fillPolygon(
+                        new double[]{cx, x - 10, x + brother.getWidth() + 10},
+                        new double[]{y - 30, y + brother.getHeight() + 12, y + brother.getHeight() + 12},
+                        3
+                );
+                graphicsContext.setStroke(Color.rgb(145, 245, 255, 0.85));
+                graphicsContext.setLineWidth(3);
+                graphicsContext.strokePolygon(
+                        new double[]{cx, x - 10, x + brother.getWidth() + 10},
+                        new double[]{y - 30, y + brother.getHeight() + 12, y + brother.getHeight() + 12},
+                        3
+                );
+            }
+
+            graphicsContext.drawImage(
+                    brother.getImage(),
+                    x, y,
+                    brother.getWidth(), brother.getHeight()
+            );
+        }
+    }
+
+    private void drawFinalDialogue(String text) {
+        if (text == null || text.isBlank()) return;
+
+        double boxX = 70;
+        double boxY = canvas.getHeight() - 170;
+        double boxW = canvas.getWidth() - 140;
+        double boxH = 115;
+
+        graphicsContext.setFill(Color.rgb(0, 0, 0, 0.88));
+        graphicsContext.fillRoundRect(boxX, boxY, boxW, boxH, 14, 14);
+        graphicsContext.setStroke(Color.rgb(180, 210, 235));
+        graphicsContext.setLineWidth(2);
+        graphicsContext.strokeRoundRect(boxX, boxY, boxW, boxH, 14, 14);
+
+        graphicsContext.setFill(Color.WHITE);
+        graphicsContext.setFont(Font.font("System", FontWeight.BOLD, 17));
+        graphicsContext.fillText(text, boxX + 22, boxY + 42, boxW - 44);
+
+        graphicsContext.setFont(Font.font("System", 14));
+        graphicsContext.setFill(Color.LIGHTGRAY);
+        graphicsContext.fillText(
+                "[ESPAÇO / ENTER] continuar",
+                boxX + boxW - 205,
+                boxY + boxH - 18
+        );
     }
 
     private void drawHealthPotion(HealthPotion potion, double cameraX, double cameraY) {
@@ -274,7 +377,7 @@ public class Renderer {
         graphicsContext.setFill(Color.WHITE);
         graphicsContext.setFont(Font.font("System", 18));
         graphicsContext.fillText(
-                "Os três Senhores Elementais foram derrotados.",
+                "Você encontrou e libertou seus três irmãos.",
                 230, 312
         );
     }

@@ -13,8 +13,9 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.input.KeyCode;
 
 /**
-
- * Entrada -> movimento do jogador ->
+ * Orquestrador do jogo.
+ *
+ * O GameEngine só coordena o ciclo: entrada -> movimento do jogador ->
  * simulação do mundo -> câmera -> renderização. Regras de mundo ficam no
  * WorldManager e desenho fica no Renderer.
  */
@@ -32,6 +33,7 @@ public class GameEngine {
     private boolean attackWasPressed;
     private boolean potionWasPressed;
     private boolean restartWasPressed;
+    private boolean finalDialogueWasPressed;
     private boolean gameOver;
     private boolean gameWon;
 
@@ -76,6 +78,14 @@ public class GameEngine {
             return;
         }
 
+        if (worldManager.isFinalDialogueActive()) {
+            handleFinalDialogueInput();
+            player.updateCooldowns(deltaTime);
+            gameWon = worldManager.isCampaignComplete();
+            return;
+        }
+
+        finalDialogueWasPressed = false;
         handlePotionInput();
         handlePlayerMovement(deltaTime);
         handleAttackInput();
@@ -90,6 +100,17 @@ public class GameEngine {
         player.updateCooldowns(deltaTime);
 
         gameWon = worldManager.isCampaignComplete();
+    }
+
+    private void handleFinalDialogueInput() {
+        boolean pressed = inputManager.isPressed(KeyCode.SPACE)
+                || inputManager.isPressed(KeyCode.ENTER);
+
+        if (pressed && !finalDialogueWasPressed) {
+            worldManager.advanceFinalDialogue();
+        }
+
+        finalDialogueWasPressed = pressed;
     }
 
     private void handlePotionInput() {
@@ -124,6 +145,17 @@ public class GameEngine {
         dx /= length;
         dy /= length;
 
+        boolean slowed = false;
+        for (br.edu.unex.nucleus.entity.Enemy enemy : worldManager.getCurrentIsland().getEnemies()) {
+            if (enemy instanceof br.edu.unex.nucleus.world.ElementBoss elemental
+                    && elemental.isSpecialActive() && !elemental.isFireSpecial()) {
+                double px = player.getX() + player.getWidth() / 2;
+                double py = player.getY() + player.getHeight() / 2;
+                if (Math.hypot(px - elemental.getSpecialX(), py - elemental.getSpecialY())
+                        <= elemental.getSpecialRadius()) slowed = true;
+            }
+        }
+        player.setMovementMultiplier(slowed ? 0.6 : 1.0);
         double distance = player.getSpeed() * deltaTime;
         int steps = Math.max(1, (int) Math.ceil(distance / 4.0));
         double stepDistance = distance / steps;
@@ -149,8 +181,8 @@ public class GameEngine {
     }
 
     /**
-     A imagem do personagem é 80x94, mas a área física é menor. A hitbox
-     fica sobre o corpo/pés para permitir passagem por pontes estreitas.
+     * A imagem do personagem é 80x94, mas a área física é menor. A hitbox
+     * fica sobre o corpo/pés para permitir passagem por pontes estreitas.
      */
     private boolean isValidPlayerPosition(Island island) {
         final double hitboxWidth = 34;
@@ -205,7 +237,10 @@ public class GameEngine {
                 camera,
                 deltaTime,
                 gameOver,
-                gameWon
+                gameWon,
+                worldManager.isFinalDialogueActive(),
+                worldManager.getFinalDialogueText(),
+                worldManager.areFinalBrothersFreed()
         );
     }
 
